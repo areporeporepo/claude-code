@@ -20,8 +20,9 @@ except Exception:  # pragma: no cover
 
 @dataclass(frozen=True)
 class Settings:
-    # Which market-data provider to use: "alphavantage" | "finnhub" | "stub"
-    price_provider: str = os.getenv("PRICE_PROVIDER", "stub")
+    # Which market-data provider to use: "dnse" | "alphavantage" | "finnhub" | "stub"
+    # "dnse" serves REAL Vietnamese (HOSE/HNX) daily data with no API key.
+    price_provider: str = os.getenv("PRICE_PROVIDER", "dnse")
     alphavantage_key: str = os.getenv("ALPHAVANTAGE_API_KEY", "")
     finnhub_key: str = os.getenv("FINNHUB_API_KEY", "")
 
@@ -30,9 +31,9 @@ class Settings:
     sentinelhub_client_secret: str = os.getenv("SENTINELHUB_CLIENT_SECRET", "")
 
     # Default asset under study. Vinhomes (Vingroup's real-estate arm) trades
-    # on the Ho Chi Minh Stock Exchange (HOSE) as VHM. Many data vendors expect
-    # the ".VN" suffix for HOSE symbols, hence the default below.
-    default_ticker: str = os.getenv("DEFAULT_TICKER", "VHM.VN")
+    # on the Ho Chi Minh Stock Exchange (HOSE) as VHM. The DNSE provider takes
+    # the bare HOSE code; global vendors may want a ".VN" suffix instead.
+    default_ticker: str = os.getenv("DEFAULT_TICKER", "VHM")
 
     risk_free_rate: float = float(os.getenv("RISK_FREE_RATE", "0.04"))
 

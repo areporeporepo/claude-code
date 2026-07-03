@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from .analysis import snapshot_dict
 from .config import settings
 from .data_providers import ProviderError, get_price_series
-from .satellite import SITES, fetch_true_color
+from .satellite import SITES, fetch_stac_crop, fetch_stac_scene, fetch_true_color
 
 DISCLAIMER = (
     "Educational/research use only. Not investment advice, not a recommendation "
@@ -74,21 +74,48 @@ def satellite_sites():
 
 @app.get("/satellite/image")
 def satellite_image(site: str = "vinhomes_vu_yen",
-                    date_from: str = "2024-01-01",
-                    date_to: str = "2024-03-01"):
-    """Fetch a true-colour satellite image (PNG) for a tracked site.
+                    date_from: str = "2026-04-01",
+                    date_to: str = "2026-07-01",
+                    provider: str = "stac",
+                    max_cloud: float = 30.0,
+                    crop: bool = True):
+    """Fetch a REAL satellite image for a tracked site.
 
-    Returns image/png on success. If Sentinel Hub credentials are missing or
-    the fetch fails, returns 200 JSON explaining why (so the pipeline never
-    hard-fails just because a key is absent).
+    provider="stac" (default): keyless Sentinel-2 via the public Earth Search
+    catalogue. With crop=true (default) it does a 10 m-resolution windowed
+    read of the scene's true-colour COG centred on the site; with crop=false
+    it returns the whole-tile preview. Scene ID / timestamp / cloud cover are
+    in response headers so anyone can re-derive the exact scene.
+    provider="sentinelhub": custom-rendered crop, needs Sentinel Hub creds.
+
+    On failure returns 200 JSON explaining why, so the pipeline never
+    hard-fails on a missing key or a cloudy month.
     """
-    result = fetch_true_color(site, date_from, date_to)
+    if provider == "sentinelhub":
+        result = fetch_true_color(site, date_from, date_to)
+        media_type = "image/png"
+    elif crop:
+        result = fetch_stac_crop(site, date_from, date_to, max_cloud=max_cloud)
+        media_type = "image/jpeg"
+    else:
+        result = fetch_stac_scene(site, date_from, date_to, max_cloud=max_cloud)
+        media_type = "image/jpeg"
     if result.fetched and result.image_bytes:
-        return Response(content=result.image_bytes, media_type="image/png")
+        return Response(
+            content=result.image_bytes,
+            media_type=media_type,
+            headers={
+                "X-Scene-Id": result.scene_id,
+                "X-Scene-Datetime": result.scene_datetime,
+                "X-Cloud-Cover": str(result.cloud_cover or ""),
+                "X-Source": result.source or provider,
+            },
+        )
     return JSONResponse({
         "fetched": False,
         "site": vars(result.site) if result.site else None,
         "reason": result.reason,
-        "how_to_enable": "Set SENTINELHUB_CLIENT_ID and SENTINELHUB_CLIENT_SECRET "
+        "hint": "provider=stac needs no key; try a wider date range or higher "
+        "max_cloud. provider=sentinelhub needs SENTINELHUB_CLIENT_ID/SECRET "
         "(free tier at https://www.sentinel-hub.com/).",
     })

@@ -4,7 +4,7 @@ import math
 
 from app import indicators as ind
 from app.analysis import build_snapshot
-from app.data_providers import get_price_series
+from app.data_providers import _stub_series
 
 
 def test_total_return():
@@ -43,16 +43,17 @@ def test_sharpe_handles_flat_series():
 
 
 def test_stub_pipeline_is_deterministic():
-    a = get_price_series("VHM.VN")
-    b = get_price_series("VHM.VN")
+    # Use the stub directly so tests stay offline regardless of PRICE_PROVIDER.
+    a = _stub_series("VHM")
+    b = _stub_series("VHM")
     assert a.closes == b.closes
     assert a.is_real is False
 
 
 def test_build_snapshot_smoke():
-    series = get_price_series("VHM.VN")
+    series = _stub_series("VHM")
     snap = build_snapshot(series)
-    assert snap.ticker == "VHM.VN"
+    assert snap.ticker == "VHM"
     assert snap.n_observations == len(series.closes)
     assert snap.trend in {"uptrend", "downtrend", "mixed", "insufficient-data"}
     assert snap.is_real_data is False

@@ -4,6 +4,8 @@ Provider-agnostic: every provider returns a list of daily closing prices,
 oldest first, so the rest of the app never cares where the numbers came from.
 
 Providers:
+  - "dnse": REAL daily OHLC for Vietnamese (HOSE/HNX) tickers via DNSE's public
+    chart API (services.entrade.com.vn). No key required. Default.
   - "stub": deterministic synthetic series. No key, no network. Lets you run
     and test the whole pipeline offline. Clearly labelled as NOT real data.
   - "alphavantage": free tier, needs ALPHAVANTAGE_API_KEY.
@@ -99,6 +101,43 @@ def _alphavantage_series(ticker: str) -> PriceSeries:
     return PriceSeries(ticker.upper(), closes, "alphavantage", True, dates=dates)
 
 
+def _dnse_series(ticker: str, days: int = 400) -> PriceSeries:
+    """Real daily closes for Vietnamese tickers (e.g. VHM on HOSE), keyless.
+
+    Uses DNSE's public chart endpoint. Symbols are bare HOSE/HNX codes
+    ("VHM", not "VHM.VN") — a trailing ".VN" is stripped for convenience.
+    """
+    import datetime as dt
+    import time
+
+    symbol = ticker.upper().removesuffix(".VN")
+    now = int(time.time())
+    data = _http_get_json(
+        "https://services.entrade.com.vn/chart-api/v2/ohlcs/stock",
+        {
+            "symbol": symbol,
+            "resolution": "1D",
+            "from": now - 60 * 60 * 24 * days,
+            "to": now,
+        },
+    )
+    closes = data.get("c") or []
+    stamps = data.get("t") or []
+    if not closes:
+        raise ProviderError(f"DNSE returned no candles for '{symbol}': {str(data)[:200]}")
+    dates = [dt.datetime.fromtimestamp(t, dt.timezone.utc).strftime("%Y-%m-%d")
+             for t in stamps]
+    return PriceSeries(
+        ticker=symbol,
+        closes=[float(c) for c in closes],
+        source="dnse",
+        is_real=True,
+        note="Real daily closes from DNSE public chart API (HOSE/HNX). "
+        "Prices are in thousands of VND as quoted by the exchange feed.",
+        dates=dates,
+    )
+
+
 def _finnhub_series(ticker: str) -> PriceSeries:
     if not settings.finnhub_key:
         raise ProviderError("FINNHUB_API_KEY is not set")
@@ -129,6 +168,8 @@ def get_price_series(ticker: Optional[str] = None) -> PriceSeries:
     """
     ticker = (ticker or settings.default_ticker).upper()
     provider = settings.price_provider.lower()
+    if provider == "dnse":
+        return _dnse_series(ticker)
     if provider == "alphavantage":
         return _alphavantage_series(ticker)
     if provider == "finnhub":

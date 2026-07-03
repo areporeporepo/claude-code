@@ -29,9 +29,9 @@ reason for yourself. That's what this backend is.
 
 | Layer | What you get | Source |
 |-------|--------------|--------|
-| **Market data** | Daily closing prices | Alpha Vantage / Finnhub (your key), or an offline synthetic stub |
+| **Market data** | REAL daily closes for HOSE/HNX tickers (default: `VHM`), **no API key needed** | DNSE public chart API; Alpha Vantage / Finnhub optional |
 | **Quant indicators** | Total return, annualized volatility, Sharpe ratio, max drawdown, SMA/EMA, RSI, trend label | Computed locally, pure Python |
-| **Alt-data (satellite)** | True-colour imagery of a tracked physical site (e.g. the Vũ Yên construction footprint) + auditable coordinates | Sentinel Hub (your key) |
+| **Alt-data (satellite)** | REAL Sentinel-2 imagery of the Vũ Yên construction footprint — 10 m crops via keyless COG reads, with scene ID / timestamp / cloud cover for verifiability | Earth Search STAC + AWS Open Data (**no key**); Sentinel Hub optional |
 
 ## Quick start
 
@@ -40,23 +40,27 @@ cd quant-invest-research
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Runs offline out of the box with SYNTHETIC data (PRICE_PROVIDER=stub):
+# Serves REAL data out of the box — no API keys required:
+#   prices:    DNSE public chart API (HOSE/HNX)
+#   satellite: public Sentinel-2 STAC catalogue on AWS
 uvicorn app.main:app --reload
 # open http://127.0.0.1:8000/docs
 ```
 
-To use real data, copy the env template and add your keys:
+Optional providers (Alpha Vantage / Finnhub / Sentinel Hub) take keys via env:
 
 ```bash
 cp .env.example .env      # then edit .env — never commit it
-# set PRICE_PROVIDER=alphavantage (or finnhub) and paste your key
 ```
+
+For fully-offline pipeline testing set `PRICE_PROVIDER=stub` (synthetic,
+clearly labelled `is_real_data: false`).
 
 ### Endpoints
 
-- `GET /snapshot?ticker=VHM.VN` — full quant snapshot
+- `GET /snapshot?ticker=VHM` — full quant snapshot from real HOSE data
 - `GET /satellite/sites` — verifiable coordinates of tracked sites
-- `GET /satellite/image?site=vinhomes_vu_yen&date_from=2024-01-01&date_to=2024-03-01` — true-colour PNG (or a JSON explainer if no Sentinel Hub key)
+- `GET /satellite/image?site=vinhomes_vu_yen&date_from=2026-04-01&date_to=2026-07-01` — real Sentinel-2 true-colour JPEG, cropped to the site at 10 m resolution (`crop=false` for the whole tile). Response headers `X-Scene-Id` / `X-Scene-Datetime` / `X-Cloud-Cover` identify the exact public scene so anyone can verify it.
 - `GET /health`, `GET /` — service info
 
 ## About the API keys you offered
@@ -68,11 +72,10 @@ control of your own credentials. Free tiers are enough to start:
 - **Market data:** [Alpha Vantage](https://www.alphavantage.co/support/#api-key) or [Finnhub](https://finnhub.io/register)
 - **Satellite:** [Sentinel Hub](https://www.sentinel-hub.com/) (Sentinel-2, free tier)
 
-> Note on Vietnamese equities: HOSE tickers like `VHM` have thinner coverage on
-> global free APIs than US tickers. If your provider returns nothing for
-> `VHM.VN`, that's a data-coverage gap, not a bug — you may need a vendor with
-> Vietnam/HOSE coverage. The `stub` provider always works for testing the
-> pipeline.
+> Note on Vietnamese equities: the default `dnse` provider covers HOSE/HNX
+> with no key. Global vendors (Alpha Vantage/Finnhub) have thin Vietnam
+> coverage — if they return nothing for `VHM`, that's a coverage gap, not a
+> bug. DNSE quotes HOSE prices in thousands of VND.
 
 ## Reading the numbers (quick quant glossary)
 
