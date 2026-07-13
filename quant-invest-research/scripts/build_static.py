@@ -174,8 +174,8 @@ def build() -> None:
     # JavaScript, so the numbers must exist as static markup too.
     html = html.replace(
         "<title>",
-        '<meta name="description" content="Vũ Yên Research: USD/m² for '
-        'Vinhomes Royal Island (Vũ Yên, Hải Phòng) vs comparables, VHM/Vingroup '
+        '<meta name="description" content="Việt Nam sustainable development research: USD/m² for '
+        'Vũ Yên, Sun Group Cát Bà (UNESCO area) and comparables, VHM/Vingroup '
         'HOSE prices, dated events and reasoned 2027-2029 outlook scenarios. '
         'Machine-readable summary inside; full dataset at data.json.">\n<title>')
     html = html.replace("</footer>",
@@ -283,7 +283,9 @@ def satellite_html(data: dict) -> str:
     rows = []
     for k, v in sites.items():
         if v.get("ok"):
-            rows.append(f"<li>{v['name']}: NDVI loss {v['cleared_ha']} ha, "
+            rec = (f"RECLAIMED {v['reclaimed_ha']} ha water→land, "
+                   if v.get("reclaimed_ha") else "")
+            rows.append(f"<li>{v['name']}: {rec}NDVI loss {v['cleared_ha']} ha, "
                         f"NDVI gain {v['revegetated_ha']} ha "
                         f"(scenes {v['scene_a']['id']} → {v['scene_b']['id']})</li>")
         else:

@@ -95,6 +95,20 @@ SITES: dict[str, Site] = {
         lat=10.4300, lon=106.8900,
         note="2,870 ha coastal mega-project, groundbreaking Apr 2025 — "
         "construction should be visible from orbit (approx. centroid)."),
+    "sun_cat_ba": Site(
+        key="sun_cat_ba",
+        name="Sun Group Xanh Island (Vịnh trung tâm, Cát Bà)",
+        lat=20.7210, lon=107.0500,
+        note="Sun Group's central-bay reclamation project fronting Cát Bà "
+        "town — in the Hạ Long–Cát Bà UNESCO World Heritage setting "
+        "(±500 m; the Cái Giá parcel to the NE is the separate stalled "
+        "Cát Bà Amatina project, not Sun/Vingroup)."),
+    "cat_ba_town": Site(
+        key="cat_ba_town",
+        name="Cát Bà town & harbour",
+        lat=20.7273, lon=107.0483,
+        note="Existing town — baseline for development-pressure comparison "
+        "on the biosphere island."),
 }
 
 
